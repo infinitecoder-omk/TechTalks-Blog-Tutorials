@@ -1,0 +1,26 @@
+[Route("api/[controller]")]
+[ApiController]
+public class IpController : ControllerBase
+{
+    [HttpGet("GetClientIpAddress")]
+    public IActionResult GetClientIpAddress()
+    {
+        string ipAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
+        if (string.IsNullOrEmpty(ipAddress))
+        {
+            ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        }
+
+        // Handle localhost case (IPv6 loopback address) form IPv6 to IPv4
+        if (ipAddress == "::1")
+        {
+            ipAddress = Dns.GetHostEntry(Dns.GetHostName())
+                           .AddressList
+                           .FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)?
+                           .ToString();
+        }
+
+        return Ok(ipAddress);
+    }
+}
