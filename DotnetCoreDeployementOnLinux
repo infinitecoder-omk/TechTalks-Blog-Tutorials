@@ -1,0 +1,94 @@
+*Right click on your dot net core project and publish this in the destination folder...
+tar -> untar it on linux machine 
+
+*Basic Linux Requirement for run dot net core project :
+
+sudo apt-get update
+sudo apt-get install apt-transport-https
+sudo apt-get install dotnet-sdk-8.0
+sudo apt-get install aspnetcore-runtime-8.0
+dotnet --version
+
+
+
+*Now install the Apache server:
+
+sudo apt-get install apache2
+sudo a2enmod proxy proxy_http proxy_html proxy_wstunnel
+sudo a2enmod rewrite
+
+
+*Now we need to make a conf file to set up our proxy on Apache. Create the following file:
+
+sudo nano /etc/apache2/conf-enabled/netcore.conf
+sudo vim /etc/apache2/conf-enabled/netcore.conf
+
+
+*Now copy the following configuration in that file,
+
+<VirtualHost *:80>
+   ServerName www.DOMAIN.COM  or localhost
+   ProxyPreserveHost On
+   ProxyPass / http://127.0.0.1:5000/
+   ProxyPassReverse / http://127.0.0.1:5000/
+   RewriteEngine on
+   RewriteCond %{HTTP:UPGRADE} ^WebSocket$ [NC]
+   RewriteCond %{HTTP:CONNECTION} Upgrade$ [NC]
+   RewriteRule /(.*) ws://127.0.0.1:5000/$1 [P]
+   ErrorLog /var/log/apache2/netcore-error.log
+   CustomLog /var/log/apache2/netcore-access.log common
+</VirtualHost>
+
+
+*copy our project to the destination :
+
+sudo cp -a ~/Desktop/Gajanan/* /var/netcore/
+
+*Create a service file for our .Net application :
+
+sudo nano /etc/systemd/system/ServiceFile.service
+sudo vim /etc/systemd/system/ServiceFile.service
+
+[Unit]
+Description=ASP .NET Web Application
+[Service]
+WorkingDirectory=/var/netcore
+ExecStart=/usr/bin/dotnet /var/netcore/IdentityLogin.dll
+Restart=always
+RestartSec=10
+SyslogIdentifier=netcore-demo
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+[Install]
+WantedBy=multi-user.target
+
+
+*now how to run application :
+
+sudo systemctl start apache2
+sudo systemctl stop apache2
+
+sudo systemctl restart apache2
+sudo systemctl restart ServiceFile
+
+
+sudo systemctl start ServiceFile
+sudo systemctl stop ServiceFile
+
+
+
+*port in use or not :
+
+sudo netstat -tulnp | grep :5000
+sudo apt install net-tools
+
+
+*findout logs of your deployed application :
+
+sudo systemctl status apache2
+sudo systemctl status ServiceFile
+journalctl -u ServiceFile
+
+*test application url in cmd :
+
+curl http://localhost:5000/HelloWorld
